@@ -18,6 +18,7 @@
         "ext-pcntl": "*"
     },
     "require-dev": {
+        "ext-inotify": "*",
         "phpunit/phpunit": "^9.0",
         "phpstan/phpstan": "^1.10",
         "vimeo/psalm": "^5.9",
