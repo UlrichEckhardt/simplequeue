@@ -8,3 +8,6 @@ build
 
 # PHPUnit cache
 .phpunit.result.cache
+
+# VisualStudio Code (VS Code) IDE configuration
+.vscode/
