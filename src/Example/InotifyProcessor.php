@@ -69,26 +69,30 @@ class Emitter implements IteratorAggregate
         $watch = inotify_add_watch(
             $inotify,
             $this->configuration->getInboxDirectory()->toString(),
-            IN_CLOSE_WRITE | IN_MOVED_TO
+            IN_CLOSE_WRITE | IN_MOVED_TO | IN_ATTRIB
         );
         if ($watch === false) {
             fclose($inotify);
             throw new Exception('inotify_add_watch() failed');
         }
 
+        // trigger processing existing jobs
+        // Just `touch` all job files once, so that inotify generates an
+        // event (IN_ATTRIB) which is then processed below. Note that
+        // this _must_ happen after configuring the watch to avoid a
+        // race condition.
+        $inbox = $this->configuration->getInboxDirectory()->toString();
+        $dir = dir($inbox);
+        while (false !== ($direntry = $dir->read())) {
+            if (is_file($inbox.'/'.$direntry)) {
+                touch($inbox.'/'.$direntry);
+            }
+        }
+
         try {
             echo posix_getpid().': processing inotify events'.PHP_EOL;
             while (true) {
-                // TODO: process existing jobs
-                // $processingStrategy->process($jobReader->retrieveAllJobs());
-
                 // wait for an inotify event
-                // If between adding the watch above and processing existing jobs
-                // another one was added, it will be processed already, resulting
-                // in a no-op loop before ending up here again.
-                // TODO: Restructure this so that only the inotify events trigger
-                // job execution. However, this _must_ handle existing events and
-                // it better avoid race condition when switching between the two.
                 $events = inotify_read($inotify);
                 if ($events === false) {
                     throw new Exception('inotify_read() failed');
@@ -96,9 +100,15 @@ class Emitter implements IteratorAggregate
                 foreach ($events as $event) {
                     echo posix_getpid().': inotify event: '.json_encode($event, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR).PHP_EOL;
                     switch ($event['mask']) {
+                        case IN_ATTRIB:
                         case IN_CLOSE_WRITE:
                         case IN_MOVED_TO:
-                            yield $this->read($event['name']);
+                            try {
+                                yield $this->read($event['name']);
+                            } catch (Exception $e) {
+                                // TODO: move file
+                                echo posix_getpid().': failed to deserialize event: '.$e->getMessage().PHP_EOL;
+                            }
                             break;
                         case IN_IGNORED:
                             // this seems to occur after processing a job
