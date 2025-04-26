@@ -17,6 +17,10 @@ jobs:
         report_file: results.sarif
         composer_ignore_platform_reqs: true
 
+    - name: Show Psalm Results
+      continue-on-error: true
+      run: cat results.sarif
+
     - name: Upload Security Analysis results to GitHub
       uses: github/codeql-action/upload-sarif@v3
       with:
