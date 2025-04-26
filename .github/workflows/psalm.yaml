@@ -1,0 +1,27 @@
+name: Psalm Static analysis
+
+on: [push, pull_request]
+
+jobs:
+  psalm:
+    name: Psalm
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Psalm
+      uses: docker://ghcr.io/psalm/psalm-github-actions:6.6.1
+      with:
+        security_analysis: true
+        report_file: results.sarif
+        composer_ignore_platform_reqs: true
+
+    - name: Show Psalm Results
+      continue-on-error: true
+      run: cat results.sarif
+
+    - name: Upload Security Analysis results to GitHub
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif
