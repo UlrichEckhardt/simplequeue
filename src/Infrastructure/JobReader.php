@@ -36,6 +36,11 @@ class JobReader
         return $this->read($jobFile);
     }
 
+    public function demo(): JobReader
+    {
+        return null;
+    }
+
     public function retrieveAllJobs(): JobCollection
     {
         $jobCollection = new JobCollection();
